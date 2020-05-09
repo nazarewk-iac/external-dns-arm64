@@ -37,18 +37,14 @@ spec:
           pushd /tmp/external-dns
           git checkout "tags/v${APP_VERSION}"
           # see https://github.com/kubernetes-sigs/external-dns/issues/1443#issuecomment-619617232
+
+          # for whatever reason sed '/make test/d' doesn't work here
           mv Dockerfile{,.bkp}
           grep -v 'make test' Dockerfile.bkp > Dockerfile
           rm Dockerfile.bkp
 
-          ls -la Dockerfile*
-          cat Dockerfile
-          if grep 'make patch' Dockerfile ; then
-            echo 'make patch found in Dockerfile!'
-            exit 1
-          fi
-
-          buildah bud -t "${IMAGE}" .
+          # see for --squash : https://github.com/containers/image/issues/733
+          buildah bud --squash -t "${IMAGE}" .
           buildah push --authfile /repository-auth-secrets/auth.json "${IMAGE}"
 
         volumeMounts:

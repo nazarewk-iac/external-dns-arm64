@@ -1,6 +1,6 @@
 NAME ?= build-external-dns-arm64
 
-
+.ONESHELL:
 all: auth.json
 
 auth.json:
