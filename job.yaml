@@ -1,0 +1,64 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: build-image
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app: build-external-dns-arm64
+    spec:
+      restartPolicy: Never
+
+      containers:
+      - name: build
+        image: nazarewk/rpi-container-image-builder:v0.0.1
+        imagePullPolicy: Always
+
+        securityContext:
+          privileged: true
+
+        env:
+        - name: IMAGE_REPOSITORY
+          value: nazarewk/external-dns-arm64
+        - name: APP_VERSION
+          value: '0.7.1'
+        - name: IMAGE
+          value: "$(IMAGE_REPOSITORY):v$(APP_VERSION)"
+
+        command:
+        - /bin/bash
+        - -xeEuo
+        - pipefail
+        - -c
+        - |-
+          git clone https://github.com/kubernetes-sigs/external-dns.git /tmp/external-dns
+          pushd /tmp/external-dns
+          git checkout "tags/v${APP_VERSION}"
+          # see https://github.com/kubernetes-sigs/external-dns/issues/1443#issuecomment-619617232
+          mv Dockerfile{,.bkp}
+          grep -v 'make test' Dockerfile.bkp > Dockerfile
+          rm Dockerfile.bkp
+
+          ls -la Dockerfile*
+          cat Dockerfile
+          if grep 'make patch' Dockerfile ; then
+            echo 'make patch found in Dockerfile!'
+            exit 1
+          fi
+
+          buildah bud -t "${IMAGE}" .
+          buildah push --authfile /repository-auth-secrets/auth.json "${IMAGE}"
+
+        volumeMounts:
+        - name: repository-auth-secrets
+          mountPath: /repository-auth-secrets
+
+      volumes:
+      - name: patches
+        configMap:
+          name: patches
+      - name: repository-auth-secrets
+        secret:
+          secretName: repository-auth-secrets

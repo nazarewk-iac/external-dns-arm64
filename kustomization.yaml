@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: build-external-dns-arm64
+resources:
+- namespace.yaml
+- job.yaml
+
+commonLabels:
+  app: build-external-dns-arm64
+
+secretGenerator:
+- name: repository-auth-secrets
+  files:
+  - auth.json
