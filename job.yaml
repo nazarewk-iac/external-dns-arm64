@@ -52,9 +52,6 @@ spec:
           mountPath: /repository-auth-secrets
 
       volumes:
-      - name: patches
-        configMap:
-          name: patches
       - name: repository-auth-secrets
         secret:
           secretName: repository-auth-secrets
